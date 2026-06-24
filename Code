@@ -1,0 +1,304 @@
+--[[ 
+    QUOCBAO V28 PRO MAX - FIXED
+    - Aimbot: GHIM ĐẦU CỰC MẠNH (Lerp nhanh, bám sát)
+    - Hitbox: 4.5 (Siêu to)
+    - ESP: Line Top, Box Outline, HP Bar
+    - UI: V28 Style
+]]
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local StarterGui = game:GetService("StarterGui")
+local CoreGui = game:GetService("CoreGui")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+-- 1. THÔNG BÁO
+pcall(function()
+    StarterGui:SetCore("SendNotification", {
+        Title = "IOSVIET",
+        Text = "Aimbot ghim đầu cực mạnh | ESP Box Outline",
+        Duration = 5
+    })
+end)
+
+-- 2. CẤU HÌNH
+_G.Config = {
+    Aimbot = false,
+    Hitbox = false,
+    AimRadius = 200,
+    ESPLine = false,
+    ESPBox = false,
+    ESPHP = false,
+    SpeedEnabled = false,
+    SpeedPower = 1.35,
+    Smoothness = 0.25 -- Tăng độ bám
+}
+
+-- Dọn dẹp UI cũ
+for _, v in pairs(CoreGui:GetChildren()) do
+    if v.Name == "QuocBao_V28_Pro" then v:Destroy() end
+end
+
+local ScreenGui = Instance.new("ScreenGui", CoreGui)
+ScreenGui.Name = "QuocBao_V28_Pro"
+
+-- 3. FOV (VÒNG TRÒN RỖNG)
+local FOVCircle = Drawing.new("Circle")
+FOVCircle.Thickness = 2
+FOVCircle.NumSides = 100
+FOVCircle.Radius = _G.Config.AimRadius
+FOVCircle.Filled = false
+FOVCircle.Color = Color3.fromRGB(0, 255, 0)
+FOVCircle.Visible = true
+
+-- 4. ESP (BOX OUTLINE - KHUNG VIỀN)
+local function CreateESP(plr)
+    local Line = Drawing.new("Line")
+    local Box = Drawing.new("Square")
+    local HPBg = Drawing.new("Square")
+    local HPBar = Drawing.new("Square")
+    
+    RunService.RenderStepped:Connect(function()
+        if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and plr ~= LocalPlayer and plr.Character.Humanoid.Health > 0 then
+            local Root = plr.Character.HumanoidRootPart
+            local Pos, OnScreen = Camera:WorldToViewportPoint(Root.Position)
+            
+            if OnScreen then
+                local SizeY = 2200 / Pos.Z
+                local SizeX = SizeY / 1.5
+                
+                -- LINE TOP
+                Line.Visible = _G.Config.ESPLine
+                Line.From = Vector2.new(Camera.ViewportSize.X / 2, 0)
+                Line.To = Vector2.new(Pos.X, Pos.Y - SizeY/2)
+                Line.Color = Color3.new(1,1,1)
+                Line.Thickness = 1
+                
+                -- BOX OUTLINE (KHUNG VIỀN, KHÔNG ĐẶC)
+                Box.Visible = _G.Config.ESPBox
+                Box.Size = Vector2.new(SizeX, SizeY)
+                Box.Position = Vector2.new(Pos.X - SizeX/2, Pos.Y - SizeY/2)
+                Box.Color = Color3.fromRGB(0, 255, 100)
+                Box.Filled = false      -- <<< QUAN TRỌNG: CHỈ HIỆN KHUNG
+                Box.Thickness = 1.5      -- Độ dày viền
+                
+                -- HP BAR
+                if _G.Config.ESPHP then
+                    local health = plr.Character.Humanoid.Health / plr.Character.Humanoid.MaxHealth
+                    HPBg.Visible = true
+                    HPBg.Size = Vector2.new(3, SizeY)
+                    HPBg.Position = Vector2.new(Pos.X - SizeX/2 - 6, Pos.Y - SizeY/2)
+                    HPBg.Color = Color3.new(0,0,0)
+                    HPBg.Filled = true
+                    
+                    HPBar.Visible = true
+                    HPBar.Size = Vector2.new(3, SizeY * health)
+                    HPBar.Position = Vector2.new(Pos.X - SizeX/2 - 6, Pos.Y - SizeY/2 + (SizeY - (SizeY * health)))
+                    HPBar.Color = Color3.fromRGB(255, 0, 0):Lerp(Color3.fromRGB(0, 255, 0), health)
+                    HPBar.Filled = true
+                else
+                    HPBg.Visible = false
+                    HPBar.Visible = false
+                end
+            else
+                Line.Visible = false
+                Box.Visible = false
+                HPBg.Visible = false
+                HPBar.Visible = false
+            end
+        else
+            Line.Visible = false
+            Box.Visible = false
+            HPBg.Visible = false
+            HPBar.Visible = false
+        end
+    end)
+end
+
+for _, v in pairs(Players:GetPlayers()) do CreateESP(v) end
+Players.PlayerAdded:Connect(CreateESP)
+
+-- 5. NÚT SPEED
+local SpeedBtn = Instance.new("TextButton", ScreenGui)
+SpeedBtn.Size = UDim2.new(0, 65, 0, 65)
+SpeedBtn.Position = UDim2.new(0.88, 0, 0.45, 0)
+SpeedBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+SpeedBtn.Text = "SPEED\nOFF"
+SpeedBtn.TextColor3 = Color3.new(1,1,1)
+SpeedBtn.Font = Enum.Font.GothamBlack
+Instance.new("UICorner", SpeedBtn).CornerRadius = UDim.new(1, 0)
+local SStroke = Instance.new("UIStroke", SpeedBtn)
+SStroke.Thickness = 3
+SStroke.Color = Color3.new(1,1,1)
+
+SpeedBtn.MouseButton1Click:Connect(function()
+    _G.Config.SpeedEnabled = not _G.Config.SpeedEnabled
+    SpeedBtn.Text = _G.Config.SpeedEnabled and "SPEED\nON" or "SPEED\nOFF"
+    SpeedBtn.BackgroundColor3 = _G.Config.SpeedEnabled and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(30, 30, 30)
+    SStroke.Color = _G.Config.SpeedEnabled and Color3.fromRGB(0, 255, 150) or Color3.new(1,1,1)
+end)
+
+-- 6. MENU V28 PRO
+local Main = Instance.new("Frame", ScreenGui)
+Main.Size = UDim2.new(0, 320, 0, 420)
+Main.Position = UDim2.new(0.5, -160, 0.5, -210)
+Main.BackgroundColor3 = Color3.fromRGB(15, 15, 30)
+Main.Visible = false
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 15)
+
+-- Logic kéo
+local dragStart, startPos, dragging
+Main.InputBegan:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = i.Position
+        startPos = Main.Position
+    end
+end)
+Main.InputChanged:Connect(function(i)
+    if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+        local d = i.Position - dragStart
+        Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
+    end
+end)
+UserInputService.InputEnded:Connect(function() dragging = false end)
+
+local Head = Instance.new("Frame", Main)
+Head.Size = UDim2.new(1, 0, 0, 50)
+Head.BackgroundColor3 = Color3.fromRGB(230, 20, 20)
+Instance.new("UICorner", Head).CornerRadius = UDim.new(0, 15)
+local Title = Instance.new("TextLabel", Head)
+Title.Size = UDim2.new(1,0,1,0)
+Title.Text = "QUOCBAO PRO V28 FIXED"
+Title.TextColor3 = Color3.new(1,1,1)
+Title.Font = Enum.Font.GothamBlack
+Title.BackgroundTransparency = 1
+Title.TextSize = 18
+
+local Con = Instance.new("Frame", Main)
+Con.Size = UDim2.new(1, -20, 1, -70)
+Con.Position = UDim2.new(0, 10, 0, 60)
+Con.BackgroundTransparency = 1
+Instance.new("UIListLayout", Con).Padding = UDim.new(0, 8)
+
+-- Slider FOV
+local SH = Instance.new("Frame", Con)
+SH.Size = UDim2.new(1,0,0,50)
+SH.BackgroundTransparency = 1
+local ST = Instance.new("TextLabel", SH)
+ST.Size = UDim2.new(1,0,0,20)
+ST.Text = "AIM RADIUS: 200"
+ST.TextColor3 = Color3.new(1,1,1)
+ST.Font = Enum.Font.GothamBold
+ST.BackgroundTransparency = 1
+local SB = Instance.new("Frame", SH)
+SB.Size = UDim2.new(1,0,0,4)
+SB.Position = UDim2.new(0,0,0.7,0)
+SB.BackgroundColor3 = Color3.new(1,1,1)
+local SK = Instance.new("TextButton", SB)
+SK.Size = UDim2.new(0,18,0,18)
+SK.Position = UDim2.new(0.4,-9,0.5,-9)
+SK.Text = ""
+SK.BackgroundColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", SK).CornerRadius = UDim.new(1,0)
+
+SK.MouseButton1Down:Connect(function()
+    local move
+    move = UserInputService.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            local x = math.clamp((input.Position.X - SB.AbsolutePosition.X) / SB.AbsoluteSize.X, 0, 1)
+            SK.Position = UDim2.new(x, -9, 0.5, -9)
+            _G.Config.AimRadius = math.floor(x * 600)
+            ST.Text = "AIM RADIUS: " .. _G.Config.AimRadius
+            FOVCircle.Radius = _G.Config.AimRadius
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+            move:Disconnect()
+        end
+    end)
+end)
+
+function AddToggle(txt, flag)
+    local B = Instance.new("TextButton", Con)
+    B.Size = UDim2.new(1,0,0,42)
+    B.BackgroundColor3 = Color3.fromRGB(40,40,65)
+    B.Text = txt
+    B.TextColor3 = Color3.new(1,1,1)
+    B.Font = Enum.Font.GothamBold
+    Instance.new("UICorner", B).CornerRadius = UDim.new(0,10)
+    B.MouseButton1Click:Connect(function()
+        _G.Config[flag] = not _G.Config[flag]
+        B.BackgroundColor3 = _G.Config[flag] and Color3.fromRGB(0, 180, 255) or Color3.fromRGB(40,40,65)
+    end)
+end
+
+AddToggle("LOCK ĐẦU (AIM FIXED)", "Aimbot")
+AddToggle("Head (4.5)", "Hitbox")
+AddToggle("ESP LINE (TOP)", "ESPLine")
+AddToggle("ESP BOX OUTLINE", "ESPBox")
+AddToggle("ESP HP BAR", "ESPHP")
+
+-- 7. AIMBOT GHIM ĐẦU CỰC MẠNH + HITBOX
+RunService.RenderStepped:Connect(function()
+    local Center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    FOVCircle.Position = Center
+    
+    -- Speed
+    if _G.Config.SpeedEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        local H = LocalPlayer.Character.Humanoid
+        if H.MoveDirection.Magnitude > 0 then
+            LocalPlayer.Character:TranslateBy(H.MoveDirection * _G.Config.SpeedPower)
+        end
+    end
+    
+    local Target = nil
+    local MinDist = _G.Config.AimRadius
+    
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") and p.Character.Humanoid.Health > 0 then
+            local head = p.Character.Head
+            local Pos, On = Camera:WorldToViewportPoint(head.Position)
+            if On then
+                local Dist = (Vector2.new(Pos.X, Pos.Y) - Center).Magnitude
+                if Dist < MinDist then
+                    MinDist = Dist
+                    Target = head
+                end
+            end
+            
+            -- HITBOX 4.5
+            if _G.Config.Hitbox then
+                head.Size = Vector3.new(4.5, 4.5, 4.5)
+                head.Transparency = 0.5
+                head.CanCollide = false
+            else
+                head.Size = Vector3.new(1.2, 1.2, 1.2)
+                head.Transparency = 0
+                head.CanCollide = true
+            end
+        end
+    end
+    
+    -- FIX AIMBOT: GHIM ĐẦU CỰC MẠNH
+    if _G.Config.Aimbot and Target then
+        local targetPos = Target.Position
+        -- Dùng CFrame để xoay camera, Lerp với smoothness thấp để bám sát
+        local newCF = CFrame.new(Camera.CFrame.Position, targetPos)
+        Camera.CFrame = Camera.CFrame:Lerp(newCF, _G.Config.Smoothness)
+    end
+end)
+
+-- Nút mở menu
+local Open = Instance.new("ImageButton", ScreenGui)
+Open.Size = UDim2.new(0, 55, 0, 55)
+Open.Position = UDim2.new(0.05, 0, 0.2, 0)
+Open.Image = "rbxassetid://3570695787"
+Instance.new("UICorner", Open).CornerRadius = UDim.new(1, 0)
+Instance.new("UIStroke", Open).Color = Color3.new(1,1,1)
+Open.MouseButton1Click:Connect(function()
+    Main.Visible = not Main.Visible
+end)
